@@ -1,3 +1,4 @@
+
 import { AiResponse, GeminiRequest, GeminiResponse, MoodAnalysis, Playlist, Track } from "@/types";
 import { searchSpotifyTracks } from "./spotify";
 
@@ -8,7 +9,8 @@ export async function analyzeMood(moodDescription: string): Promise<AiResponse> 
   try {
     // Call Gemini API
     const apiKey = "AIzaSyCFWyeKi7S2gSa7_UVb4JSB9KCeh6OVvP0"; // Note: In a production app, this should be stored securely
-    const geminiEndpoint = "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent";
+    // Updated endpoint to v1 instead of v1beta
+    const geminiEndpoint = "https://generativelanguage.googleapis.com/v1/models/gemini-pro:generateContent";
     
     const prompt = `
       Analyze the following mood description and return a JSON object with these fields:
@@ -163,6 +165,13 @@ export async function generatePlaylist(moodAnalysis: MoodAnalysis): Promise<Play
       10 // Get 10 tracks
     );
     
+    // Check if we actually got tracks back
+    if (!tracks || tracks.length === 0) {
+      console.log("No tracks returned from Spotify, using fallback");
+      throw new Error("No tracks returned from Spotify");
+    }
+    
+    // Create a playlist with the real Spotify tracks
     return {
       id: `playlist-${Date.now()}`,
       name: `${moodAnalysis.moodType.charAt(0).toUpperCase() + moodAnalysis.moodType.slice(1)} Mood Mix`,

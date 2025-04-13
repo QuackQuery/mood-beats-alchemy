@@ -15,52 +15,77 @@ async function getAccessToken(): Promise<string> {
     return accessToken;
   }
   
-  // Get a new token
-  const response = await fetch("https://accounts.spotify.com/api/token", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/x-www-form-urlencoded",
-      "Authorization": `Basic ${btoa(`${CLIENT_ID}:${CLIENT_SECRET}`)}`
-    },
-    body: "grant_type=client_credentials"
-  });
+  // Get a new token using URLSearchParams for proper encoding
+  const tokenUrl = 'https://accounts.spotify.com/api/token';
+  const authHeader = btoa(`${CLIENT_ID}:${CLIENT_SECRET}`);
   
-  if (!response.ok) {
-    throw new Error("Failed to get Spotify access token");
+  const body = new URLSearchParams();
+  body.append('grant_type', 'client_credentials');
+  
+  try {
+    const response = await fetch(tokenUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'Authorization': `Basic ${authHeader}`
+      },
+      body: body.toString()
+    });
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('Spotify auth error response:', errorText);
+      throw new Error(`Failed to get Spotify access token: ${response.status}`);
+    }
+    
+    const data = await response.json();
+    accessToken = data.access_token;
+    tokenExpiration = Date.now() + (data.expires_in * 1000);
+    console.log('Successfully obtained Spotify access token');
+    
+    return accessToken;
+  } catch (error) {
+    console.error('Error in getAccessToken:', error);
+    throw error;
   }
-  
-  const data = await response.json();
-  accessToken = data.access_token;
-  tokenExpiration = Date.now() + (data.expires_in * 1000);
-  
-  return accessToken;
 }
 
 // Search Spotify for tracks based on genres and mood
-export async function searchSpotifyTracks(genres: string[], mood: string, limit: number = 5): Promise<Track[]> {
+export async function searchSpotifyTracks(genres: string[], mood: string, limit: number = 10): Promise<Track[]> {
   try {
     const token = await getAccessToken();
     
-    // Build search query using genres and mood
-    const searchQuery = `genre:${genres.join(" OR genre:")} ${mood}`;
+    // Build search query - use simpler query format
+    // Instead of complex genre filters, use a simpler approach that works better with Spotify search
+    const searchQuery = `${mood} ${genres.slice(0, 2).join(' ')}`;
+    console.log('Searching Spotify with query:', searchQuery);
+    
     const searchParams = new URLSearchParams({
       q: searchQuery,
-      type: "track",
+      type: 'track',
       limit: limit.toString(),
-      market: "US" // Ensure we get tracks that are available in the US market
+      market: 'US' // Ensure we get tracks that are available in the US market
     });
     
-    const response = await fetch(`https://api.spotify.com/v1/search?${searchParams}`, {
+    const searchUrl = `https://api.spotify.com/v1/search?${searchParams.toString()}`;
+    console.log('Searching Spotify at URL:', searchUrl);
+    
+    const response = await fetch(searchUrl, {
+      method: 'GET',
       headers: {
-        "Authorization": `Bearer ${token}`
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
       }
     });
     
     if (!response.ok) {
-      throw new Error("Failed to search Spotify tracks");
+      const errorText = await response.text();
+      console.error('Spotify search error response:', errorText);
+      throw new Error(`Failed to search Spotify tracks: ${response.status}`);
     }
     
     const data: SpotifySearchResponse = await response.json();
+    console.log('Spotify returned tracks:', data.tracks.items.length);
     
     // Map Spotify track format to our Track interface
     return data.tracks.items.map(track => ({
