@@ -1,5 +1,5 @@
-
 import { AiResponse, GeminiRequest, GeminiResponse, MoodAnalysis, Playlist, Track } from "@/types";
+import { searchSpotifyTracks } from "./spotify";
 
 // Gemini API implementation for mood analysis
 export async function analyzeMood(moodDescription: string): Promise<AiResponse> {
@@ -151,13 +151,36 @@ function simulateMoodAnalysis(moodDescription: string): AiResponse {
   return { moodAnalysis };
 }
 
-// Simulated Spotify API response for generating playlists
-// In a real implementation, this would call the Spotify API
+// Generate playlist using Spotify API
 export async function generatePlaylist(moodAnalysis: MoodAnalysis): Promise<Playlist> {
   console.log("Generating playlist based on mood:", moodAnalysis);
   
-  // Simulate API call delay
-  await new Promise(resolve => setTimeout(resolve, 2000));
+  try {
+    // Get tracks from Spotify based on mood
+    const tracks = await searchSpotifyTracks(
+      moodAnalysis.recommendedGenres, 
+      moodAnalysis.moodType,
+      10 // Get 10 tracks
+    );
+    
+    return {
+      id: `playlist-${Date.now()}`,
+      name: `${moodAnalysis.moodType.charAt(0).toUpperCase() + moodAnalysis.moodType.slice(1)} Mood Mix`,
+      description: `A playlist generated based on your ${moodAnalysis.moodType} mood. Featuring genres like ${moodAnalysis.recommendedGenres.join(", ")}.`,
+      tracks: tracks,
+      external_url: `https://open.spotify.com/search/${encodeURIComponent(moodAnalysis.moodType)}`
+    };
+  } catch (error) {
+    console.error("Error generating playlist with Spotify:", error);
+    
+    // Fall back to simulated playlist if Spotify API fails
+    return generateSimulatedPlaylist(moodAnalysis);
+  }
+}
+
+// Fallback function for simulated playlist
+function generateSimulatedPlaylist(moodAnalysis: MoodAnalysis): Playlist {
+  console.log("Falling back to simulated playlist");
   
   // Mock data for different moods
   const mockPlaylists: Record<string, Partial<Track>[]> = {
