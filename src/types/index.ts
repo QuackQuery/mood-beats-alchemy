@@ -41,3 +41,31 @@ export interface Playlist {
 export interface AiResponse {
   moodAnalysis: MoodAnalysis;
 }
+
+// Gemini API related types
+export interface GeminiRequestContent {
+  parts: {
+    text: string;
+  }[];
+}
+
+export interface GeminiRequest {
+  contents: GeminiRequestContent[];
+}
+
+export interface GeminiResponsePart {
+  text: string;
+}
+
+export interface GeminiResponseContent {
+  parts: GeminiResponsePart[];
+  role: string;
+}
+
+export interface GeminiResponse {
+  candidates: {
+    content: GeminiResponseContent;
+    finishReason: string;
+    index: number;
+  }[];
+}

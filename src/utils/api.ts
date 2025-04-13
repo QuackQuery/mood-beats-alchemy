@@ -1,12 +1,95 @@
 
-import { AiResponse, MoodAnalysis, Playlist, Track } from "@/types";
+import { AiResponse, GeminiRequest, GeminiResponse, MoodAnalysis, Playlist, Track } from "@/types";
 
-// Simulated AI response for mood analysis
-// In a real implementation, this would call Gemini API
+// Gemini API implementation for mood analysis
 export async function analyzeMood(moodDescription: string): Promise<AiResponse> {
-  console.log("Analyzing mood:", moodDescription);
+  console.log("Analyzing mood with Gemini API:", moodDescription);
+
+  try {
+    // Call Gemini API
+    const apiKey = "AIzaSyCFWyeKi7S2gSa7_UVb4JSB9KCeh6OVvP0"; // Note: In a production app, this should be stored securely
+    const geminiEndpoint = "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent";
+    
+    const prompt = `
+      Analyze the following mood description and return a JSON object with these fields:
+      - moodType: A single word describing the overall mood (e.g., happy, sad, energetic, calm, focused, romantic, neutral)
+      - intensity: A number between 0 and 1 representing how intense the mood is
+      - description: A short sentence describing the mood analysis
+      - recommendedGenres: An array of 4-5 music genres that match this mood
+      - color: A hex color code that represents this mood (e.g., #FFD700 for happy)
+
+      Mood description: "${moodDescription}"
+
+      Return ONLY the JSON object without any additional text or explanation.
+    `;
+
+    const requestData: GeminiRequest = {
+      contents: [
+        {
+          parts: [
+            {
+              text: prompt
+            }
+          ]
+        }
+      ]
+    };
+
+    const response = await fetch(`${geminiEndpoint}?key=${apiKey}`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(requestData)
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error("Gemini API error:", errorText);
+      throw new Error(`Gemini API error: ${response.status}`);
+    }
+
+    const data = await response.json() as GeminiResponse;
+    
+    if (!data.candidates || data.candidates.length === 0) {
+      throw new Error("No response from Gemini API");
+    }
+
+    const responseText = data.candidates[0].content.parts[0].text;
+    
+    // Extract JSON from the response
+    let jsonStr = responseText;
+    
+    // If the response includes markdown code blocks, extract just the JSON
+    if (responseText.includes("```json")) {
+      jsonStr = responseText.split("```json")[1].split("```")[0].trim();
+    } else if (responseText.includes("```")) {
+      jsonStr = responseText.split("```")[1].split("```")[0].trim();
+    }
+    
+    // Parse the JSON string into an object
+    const moodAnalysis = JSON.parse(jsonStr) as MoodAnalysis;
+    
+    // Ensure all required fields are present
+    if (!moodAnalysis.moodType || !moodAnalysis.intensity || 
+        !moodAnalysis.description || !moodAnalysis.recommendedGenres || 
+        !moodAnalysis.color) {
+      throw new Error("Invalid response format from Gemini API");
+    }
+    
+    return { moodAnalysis };
+  } catch (error) {
+    console.error("Error calling Gemini API:", error);
+    
+    // Fallback to simulated response in case of error
+    return simulateMoodAnalysis(moodDescription);
+  }
+}
+
+// Fallback function for simulated mood analysis
+function simulateMoodAnalysis(moodDescription: string): AiResponse {
+  console.log("Falling back to simulated mood analysis");
   
-  // The following is a simulation - in a real app, this would be a call to Gemini AI
   const lowerCaseDescription = moodDescription.toLowerCase();
   let moodType = "neutral";
   let color = "#7B68EE"; // Default purple
@@ -57,9 +140,6 @@ export async function analyzeMood(moodDescription: string): Promise<AiResponse> 
     genres = ["romance", "r-n-b", "love songs", "jazz"];
   }
 
-  // Simulate AI processing time
-  await new Promise(resolve => setTimeout(resolve, 1500));
-  
   const moodAnalysis: MoodAnalysis = {
     moodType,
     intensity,
