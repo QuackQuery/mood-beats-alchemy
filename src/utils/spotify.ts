@@ -4,7 +4,7 @@ import { SpotifySearchResponse, Track } from "@/types";
 // Note: In a production app, these would be stored securely
 // These are client credentials which are relatively safe to expose in client-side code
 const CLIENT_ID = "31c9ac56bdf1463abb98f91536bc7b0a";
-const CLIENT_SECRET = "6a1e91fe5c5e4c6586c5e9d78ea3282d";
+const CLIENT_SECRET = "cdbcf98eeb7749da9838c9b4eb9ba8ee";
 let accessToken: string | null = null;
 let tokenExpiration: number = 0;
 
